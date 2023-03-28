@@ -86,7 +86,7 @@ class AmapLocationFactory: NSObject, AMapLocationManagerDelegate, FlutterStreamH
                         dataMap["address"] = reGeocode.formattedAddress
                         dataMap["country"] = reGeocode.country
                         dataMap["city"] = reGeocode.city
-                        dataMap["cityCode"] = reGeocode.cityCode
+                        dataMap["cityCode"] = reGeocode.citycode
                         dataMap["street"] = reGeocode.street
                         dataMap["district"] = reGeocode.district
                         dataMap["province"] = reGeocode.province
@@ -187,7 +187,7 @@ class AmapLocationFactory: NSObject, AMapLocationManagerDelegate, FlutterStreamH
                 dataMap["address"] = reGeocode.formattedAddress
                 dataMap["country"] = reGeocode.country
                 dataMap["city"] = reGeocode.city
-                dataMap["cityCode"] = reGeocode.cityCode
+                dataMap["cityCode"] = reGeocode.citycode
                 dataMap["street"] = reGeocode.street
                 dataMap["district"] = reGeocode.district
                 dataMap["province"] = reGeocode.province

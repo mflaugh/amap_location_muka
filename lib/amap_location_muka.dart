@@ -124,6 +124,7 @@ class AMapLocation {
     });
     if (_stream == null) {
       _stream = _eventStream.listen((dynamic data) {
+        if (data is String) return;
         listen!(Location.fromJson(data));
       });
     }
@@ -139,7 +140,8 @@ class AMapLocation {
     required String assetName,
     bool? vibrate,
   }) async {
-    await _channel.invokeMethod('enableBackground', {'title': title, 'label': label, 'assetName': assetName, 'vibrate': vibrate ?? true});
+    await _channel.invokeMethod(
+        'enableBackground', {'title': title, 'label': label, 'assetName': assetName, 'vibrate': vibrate ?? true});
   }
 
   /// 关闭后台服务
@@ -178,7 +180,8 @@ class AMapLocation {
   ///
   /// [customId] 与围栏关联的自有业务Id
   ///
-  static Future<void> addGeoFencePoint(String keyword, String poiType, LatLng point, double aroundRadius, String customId) async {
+  static Future<void> addGeoFencePoint(
+      String keyword, String poiType, LatLng point, double aroundRadius, String customId) async {
     await _channel.invokeMethod('addGeoFencePoint', {
       'keyword': keyword,
       'poiType': poiType,

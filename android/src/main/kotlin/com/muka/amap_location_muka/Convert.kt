@@ -16,6 +16,7 @@ class Convert {
             data["coordType"] = location.coordType
             data["country"] = location.country
             data["city"] = location.city
+            data["cityCode"] = location.cityCode
             data["district"] = location.district
             data["street"] = location.street
             data["address"] = location.address
