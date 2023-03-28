@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js';
+
 // In order to *not* need this ignore, consider extracting the "web" version
 // of your plugin as a separate package, instead of inlining it in the same
 // package as the core of your plugin.
@@ -21,7 +22,7 @@ class AmapLocationMukaWeb {
     MethodChannel channel = MethodChannel(
       'plugins.muka.com/amap_location',
       const StandardMethodCodec(),
-      registrar.messenger,
+      registrar,
     );
 
     final pluginInstance = AmapLocationMukaWeb();
@@ -33,6 +34,12 @@ class AmapLocationMukaWeb {
   /// https://flutter.dev/go/federated-plugins
   Future<dynamic> handleMethodCall(MethodCall call) async {
     switch (call.method) {
+      case 'setApiKey':
+        return Future.value(null);
+      case 'updatePrivacyShow':
+        return Future.value(null);
+      case 'updatePrivacyAgree':
+        return Future.value(null);
       case 'fetch':
         return fetchLocation();
       case 'start':
