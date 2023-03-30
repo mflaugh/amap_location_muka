@@ -34,40 +34,20 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
     private lateinit var eventChannel: EventChannel
     private lateinit var pluginBinding: FlutterPlugin.FlutterPluginBinding
     private var eventSink: EventChannel.EventSink? = null
-    private lateinit var watchClient: AMapLocationClient
     private var channelId: String = "plugins.muka.com/amap_location_server"
     private var notificationManager: NotificationManager? = null
     private var isCreateChannel = false
     private var msgId = -1
     private var wakeLock: PowerManager.WakeLock? = null
-    private lateinit var mGeoFenceClient: GeoFenceClient
+    private var mGeoFenceClient: GeoFenceClient? = null;
+    private var watchClient: AMapLocationClient? = null;
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         pluginBinding = flutterPluginBinding
-        channel =
-            MethodChannel(flutterPluginBinding.binaryMessenger, "plugins.muka.com/amap_location")
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "plugins.muka.com/amap_location")
         channel.setMethodCallHandler(this);
-        eventChannel = EventChannel(
-            flutterPluginBinding.binaryMessenger,
-            "plugins.muka.com/amap_location_event"
-        )
+        eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "plugins.muka.com/amap_location_event")
         eventChannel.setStreamHandler(this);
-        watchClient = AMapLocationClient(flutterPluginBinding.applicationContext)
-        mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext)
-
-        watchClient.setLocationListener {
-            if (it != null) {
-                if (it.errorCode == 0) {
-                    eventSink?.success(Convert.toJson(it))
-                } else {
-                    eventSink?.error(
-                        "AmapError",
-                        "onLocationChanged Error: ${it.errorInfo}",
-                        it.errorInfo
-                    )
-                }
-            }
-        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -99,21 +79,25 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                 }
                 locationClient.startLocation()
             }
-              "setApiKey" -> {
+
+            "setApiKey" -> {
                 setApiKey(call.arguments as Map<*, *>)
                 result.success(null)
             }
+
             "updatePrivacyShow" -> {
                 var hasContains: Boolean = call.argument("hasContains")!!
                 var hasShow: Boolean = call.argument("hasShow")!!
-                AMapLocationClient.updatePrivacyShow(pluginBinding.applicationContext,hasContains, hasShow)
+                AMapLocationClient.updatePrivacyShow(pluginBinding.applicationContext, hasContains, hasShow)
                 result.success(null)
             }
+
             "updatePrivacyAgree" -> {
                 var hasAgree: Boolean = call.argument("hasAgree")!!
-                AMapLocationClient.updatePrivacyAgree(pluginBinding.applicationContext,hasAgree)
+                AMapLocationClient.updatePrivacyAgree(pluginBinding.applicationContext, hasAgree)
                 result.success(null)
             }
+
             "start" -> {
                 var mode: Any? = call.argument("mode")
                 var time: Int = call.argument<Int>("time") ?: 2000
@@ -124,16 +108,34 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                     else -> AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
                 }
                 locationOption.interval = time.toLong();
-                watchClient.setLocationOption(locationOption)
-                watchClient.startLocation()
+                if (watchClient == null) {
+                    watchClient = AMapLocationClient(pluginBinding.applicationContext)
+                    watchClient?.setLocationListener {
+                        if (it != null) {
+                            if (it.errorCode == 0) {
+                                eventSink?.success(Convert.toJson(it))
+                            } else {
+                                eventSink?.error(
+                                    "AmapError",
+                                    "onLocationChanged Error: ${it.errorInfo}",
+                                    it.errorInfo
+                                )
+                            }
+                        }
+                    }
+                }
+                watchClient?.setLocationOption(locationOption)
+                watchClient?.startLocation()
                 result.success(null)
             }
+
             "stop" -> {
-                watchClient.stopLocation()
+                watchClient?.stopLocation()
                 result.success(null)
             }
+
             "enableBackground" -> {
-                watchClient.enableBackgroundLocation(
+                watchClient?.enableBackgroundLocation(
                     2001, buildNotification(
                         call.argument("title")
                             ?: "", call.argument("label") ?: "", call.argument("assetName")
@@ -142,8 +144,9 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                 )
                 result.success(null)
             }
+
             "disableBackground" -> {
-                watchClient.disableBackgroundLocation(true)
+                watchClient?.disableBackgroundLocation(true)
                 notificationManager?.deleteNotificationChannel(channelId)
                 result.success(null)
             }
@@ -154,8 +157,10 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                 var poiType = (call.argument("poiType") as String?)!!
                 var city = (call.argument("city") as String?)!!
                 var customId = (call.argument("customId") as String?)!!
-                mGeoFenceClient.addGeoFence(keyword, poiType, city, 1, customId)
+                if (mGeoFenceClient == null) mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext);
+                mGeoFenceClient?.addGeoFence(keyword, poiType, city, 1, customId)
             }
+
             "addGeoFencePoint" -> {
                 /// 根据周边POI创建围栏
                 var keyword = (call.argument("keyword") as String?)!!
@@ -166,7 +171,8 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                 var centerPoint = DPoint()
                 centerPoint.latitude = point["latitude"] as Double
                 centerPoint.longitude = point["longitude"] as Double
-                mGeoFenceClient.addGeoFence(
+                if (mGeoFenceClient == null) mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext);
+                mGeoFenceClient?.addGeoFence(
                     keyword,
                     poiType,
                     centerPoint,
@@ -175,12 +181,15 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                     customId
                 )
             }
+
             "addGeoFenceArea" -> {
                 /// 创建行政区划围栏
                 var keyword = (call.argument("keyword") as String?)!!
                 var customId = (call.argument("customId") as String?)!!
-                mGeoFenceClient.addGeoFence(keyword, customId)
+                if (mGeoFenceClient == null) mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext);
+                mGeoFenceClient?.addGeoFence(keyword, customId)
             }
+
             "addGeoFenceDiy" -> {
                 /// 创建自定义围栏
                 var point = (call.argument("point") as Map<String, Any>?)!!
@@ -189,18 +198,22 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
                 var centerPoint = DPoint()
                 centerPoint.latitude = point["latitude"] as Double
                 centerPoint.longitude = point["longitude"] as Double
-                mGeoFenceClient.addGeoFence(centerPoint, radius.toFloat(), customId)
+                if (mGeoFenceClient == null) mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext);
+                mGeoFenceClient?.addGeoFence(centerPoint, radius.toFloat(), customId)
             }
+
             "addGeoFencePolygon" -> {
                 /// 创建自定义围栏
-                var points = (call.argument("points") as List<Map<String,Any>>?)!!
+                var points = (call.argument("points") as List<Map<String, Any>>?)!!
                 var customId = (call.argument("customId") as String?)!!
                 val pois: ArrayList<DPoint> = ArrayList<DPoint>()
                 points.forEach {
                     pois.add(DPoint(it?.get("latitude") as Double, it["longitude"] as Double))
                 }
-                mGeoFenceClient.addGeoFence(pois, customId)
+                if (mGeoFenceClient == null) mGeoFenceClient = GeoFenceClient(pluginBinding.applicationContext);
+                mGeoFenceClient?.addGeoFence(pois, customId)
             }
+
             else -> {
                 result.notImplemented()
             }
@@ -232,9 +245,7 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
 //        setAppBackgroundPlayer()
         acquireWakeLock()
         // 刷新定位
-        if (watchClient != null && watchClient.isStarted) {
-            watchClient.startLocation()
-        }
+        if (watchClient != null && watchClient!!.isStarted) watchClient!!.startLocation()
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -257,7 +268,8 @@ class AmapLocationMukaPlugin : Service(), FlutterPlugin, MethodCallHandler,
     private fun setApiKey(apiKeyMap: Map<*, *>?) {
         if (null != apiKeyMap) {
             if (apiKeyMap.containsKey("android")
-                    && !TextUtils.isEmpty(apiKeyMap["android"] as String?)) {
+                && !TextUtils.isEmpty(apiKeyMap["android"] as String?)
+            ) {
                 AMapLocationClient.setApiKey(apiKeyMap["android"] as String?)
             }
         }
